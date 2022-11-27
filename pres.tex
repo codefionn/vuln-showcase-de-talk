@@ -1,0 +1,222 @@
+\documentclass[ngerman2]{beamer}
+\usetheme{Rochester}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage[babel,german=quotes]{csquotes}
+\usepackage[ngerman]{babel}
+\usepackage[backend=biber,style=numeric]{biblatex}
+\addbibresource{common.bib}
+\usepackage{lmodern}
+\usepackage{listings}
+\lstset{literate=%
+  {Ö}{{\"O}}1
+  {Ä}{{\"A}}1
+  {Ü}{{\"U}}1
+  {ß}{{\ss}}1
+  {ü}{{\"u}}1
+  {ä}{{\"a}}1
+  {ö}{{\"o}}1
+}
+
+%Information to be included in the title page:
+\title{Web security}
+\subtitle{Sicherheit beim Bereitsstellen und Erstellen von Web-Anwendungen}
+\author{Fionn Langhans}
+\date{\today}
+
+\begin{document}
+
+\frame{\titlepage}
+
+\begin{frame}
+\frametitle{Übersicht}
+  \tableofcontents
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Ablauf}
+  \begin{itemize}
+		\item Interaktiv
+		\item Fragen jederzeit per Meldung stellen
+    \item Verfügbar unter https://github.com/codefionn/vuln-showcase-de-talk
+      oder https://codeberg.org/codefionn/vuln-showcase-de-talk
+    \item Lizensiert unter AGPLv3 \cite{agplv3}
+  \end{itemize}
+\end{frame}
+
+\section{Was dies nicht ist}
+
+\begin{frame}[fragile]
+\frametitle{Was ist dies nicht}
+  \begin{itemize}
+		\item Phishing-Attacken
+		\item Supply-Chain Attacken
+    \item Captcha
+    \item ... oder Security by Obscurity
+  \end{itemize}
+\end{frame}
+
+\section{Verbindungssicherheit}
+
+\begin{frame}[fragile]
+\frametitle{Verbindungssicherheit}
+  \begin{itemize}
+		\item Eine verschlüsselte Verbindung immer sicherstellen\\
+      (also HTTPS, oder auch verschlüsselte Websockets)
+		\item Auch HSTS (Strict-Transport-Security) auch verwenden\\
+			(Ohne HSTS kann der Angreifer die initiale Verbindung per HTTP kontrollieren)
+  \end{itemize}
+\end{frame}
+
+\section{Weitere Sicherheitseinstellungen im HTTP-Header}
+
+\begin{frame}[fragile]
+\frametitle{Weitere Sicherheitseinstellungen im HTTP-Header}
+  \begin{itemize}
+		\item Content-Security-Policy: default-src 'self';\\
+			Inhalte von Dritten nicht erlauben (Skripte, Bilder, usw.)
+		\item X-Frame-Options: DENY\\
+			Dritten nicht erlauben die Seite einzubinden
+		\item X-Content-Type-Options: nosniff\\
+			Nur Skripte, Bilder, usw. erlauben die einen korrekten 'Content-Type' haben
+  \end{itemize}
+\end{frame}
+
+\section{Passwort Hashing}
+
+\begin{frame}[fragile]
+\frametitle{Passwort Hashing}
+  \begin{itemize}
+		\item Passwörter müssen mit einer Hash-Funktion "verschlüsselt" werden (DSVGO)
+		\item z.B. SHA-256 oder argon2i (nicht MD5)
+		\item Für beste Security noch einen Salt verwenden\\
+      (verhindert einfache Rainbow Tables)
+    \item z.B. A1 Telekom Austria
+      \cite{a1passwoerter}
+  \end{itemize}
+\end{frame}
+
+\section{Eingaben serverseitg prüfen}
+
+\begin{frame}[fragile]
+\frametitle{Eingaben serverseitg prüfen}
+  \begin{itemize}
+    \item Eingaben können immer von Nutzer gefälscht werden\\
+			(in dem das HTML bearbeitet werden oder manuell die Anfrage abgeschickt wird)
+		\item ... Also nicht nur per JavaScript auf der Webseite prüfen
+    \item (oder nicht nur in der App)
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Eingaben serverseitg prüfen - SQL Injection}
+  \begin{itemize}
+    \item Mit ' kann man aus einem SQL-String ausbrechen
+		\item ... so könnte man Daten auslesen die man nicht sehen darf, z.B.
+			\begin{lstlisting}
+' OR 1 = 1 OR '' = '
+			\end{lstlisting}
+    \item z.B. In Wordpress CVE-2022-21661 \cite{CVE202221661}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Eingaben serverseitg prüfen - XSS Injection}
+  \begin{itemize}
+		\item Mit $<$ kann man einen Tag öffnen
+		\item Mit " kann man ein Attribut schließen
+		\item Damit kann man $<$script$>$ einfügen\
+			\begin{lstlisting}[language=HTML]
+<script>
+  alert("Hello, world!");
+</script>
+			\end{lstlisting}
+    \item Unterschied zwischen innerHTML und innerText
+    \item z.B. XSS Lücke bei Vodafone
+      \cite{vodafonexssattack},
+      natürlich hat auch Vodafone Dokumentation über XSS
+      \cite{vodafonexssattackdoc}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Eingaben serverseitg prüfen - Autorisierung}
+  \begin{itemize}
+    \item Nicht Authentifizierung!
+		\item Immer prüfen, ob ein Nutzer auch wirklich auf etwas zugreifen darf
+    \item z.B. bei einer Detailansicht prüfen, ob dies auch in der Übersicht ist
+    \item z.B. CVE-2022-22978
+      (Einfache zu machene fehlerhafte Konfiguration kann zum umgehen von der Autorisierung führen in Spring)
+      \cite{CVE202222978}
+  \end{itemize}
+\end{frame}
+
+\section{Timing-Attacken}
+
+\begin{frame}[fragile]
+\frametitle{Timing-Attacken}
+  \begin{itemize}
+		\item Abläufe die besonders kritisch sind, können mit sogenannten Timing-Attacken angegriffen werden
+    \item Hierbei wird ausgenutzt, dass bei der Überprüfung von z.B. bei einer
+      E-Mail beim Login mehr Zeit verbraucht wird, wenn diese richtig ist
+    \item z.B. CVE-2021-38153
+      (Unsichere Vergleichsmethode um Passwörter und Schlüssel zu prüfen in Apache Kafka)
+      \cite{CVE202138153}
+  \end{itemize}
+\end{frame}
+
+\section{Cryptographie und Zufallszahlen}
+
+\begin{frame}[fragile]
+\frametitle{Cryptographie und Zufallswerte}
+  \begin{itemize}
+    \item "Don't roll your own crypto"
+    \item z.B. SSDs von Samsung oder Crucial \cite{ssdscrypt}\\
+      (Dies hat BitLocker's Sicherheit auf Windows ruiniert)
+      \cite{bitlockermssoftware}
+    \item Cryptografisch sichere Zufallszahlen
+    \item z.B. Unterschied zwischen UUIDv1 und UUIDv4 \cite{uuid}
+    \item CVE-2008-0166\\
+      (Fehler bei der Zufallszahlengenerierung in OpenSSL auf Debian)
+      \cite{debiansslcve}
+      \cite{debiansslcvenist}
+  \end{itemize}
+\end{frame}
+
+\section{Read the docs}
+
+\begin{frame}[fragile]
+\frametitle{Read the docs}
+  \begin{itemize}
+		\item RTFM
+    \item z.B. Elastic Search fehlerhafte Konfiguration bei Adobe
+      \cite{adobeelasticsearch}
+    \item z.B. log4j
+      \cite{CVE202144228}
+  \end{itemize}
+\end{frame}
+
+\section{Weiterführend}
+
+\begin{frame}
+\frametitle{Weiterführend}
+  \begin{itemize}
+    \item Bitte Secure by default
+    \item nicht Shoot the messenger\\
+      (z.B. CDU App Sicherheitslücke \cite{csuapp})
+    \item Kein Military Grade Encryption erwähnen
+    \item Haftung bei Sicherheitslücken in der EU \cite{eusechaftung}
+    \item \href{https://web.dev/secure/}{web.dev - Safe and secure}
+    \item \href{https://codefionn.eu/web-security-basics/}{codefionn.eu - Web security basics}
+  \end{itemize}
+\end{frame}
+
+\section{Quellen}
+
+\begin{frame}[allowframebreaks]
+\frametitle{Quellen}
+  \printbibliography
+  \small{Erstellt mit \LaTeX}
+\end{frame}
+
+\end{document}
