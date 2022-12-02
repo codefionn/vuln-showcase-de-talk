@@ -17,6 +17,21 @@
   {ä}{{\"a}}1
   {ö}{{\"o}}1
 }
+\lstdefinelanguage{JavaScript}{
+  morekeywords=[1]{break, continue, delete, else, for, function, if, in,
+    new, return, this, typeof, var, void, while, with},
+  % Literals, primitive types, and reference types.
+  morekeywords=[2]{false, null, true, boolean, number, undefined,
+    Array, Boolean, Date, Math, Number, String, Object},
+  % Built-ins.
+  morekeywords=[3]{eval, parseInt, parseFloat, escape, unescape},
+  sensitive,
+  morecomment=[s]{/*}{*/},
+  morecomment=[l]//,
+  morecomment=[s]{/**}{*/}, % JavaDoc style comments
+  morestring=[b]',
+  morestring=[b]"
+}[keywords, comments, strings]
 
 %Information to be included in the title page:
 \title{Web security}
@@ -52,6 +67,7 @@
 		\item Phishing-Attacken
 		\item Supply-Chain Attacken
     \item Captcha
+    \item Secrets im Repo
     \item ... oder Security by Obscurity
   \end{itemize}
 \end{frame}
@@ -63,7 +79,7 @@
   \begin{itemize}
 		\item Eine verschlüsselte Verbindung immer sicherstellen\\
       (also HTTPS, oder auch verschlüsselte Websockets)
-		\item Auch HSTS (Strict-Transport-Security) auch verwenden\\
+		\item Auch HSTS (Strict-Transport-Security) verwenden\\
 			(Ohne HSTS kann der Angreifer die initiale Verbindung per HTTP kontrollieren)
   \end{itemize}
 \end{frame}
@@ -77,8 +93,14 @@
 			Inhalte von Dritten nicht erlauben (Skripte, Bilder, usw.)
 		\item X-Frame-Options: DENY\\
 			Dritten nicht erlauben die Seite einzubinden
+      \begin{lstlisting}[language=HTML]
+<iframe src="https://codefionn.eu"></iframe>
+			\end{lstlisting}
 		\item X-Content-Type-Options: nosniff\\
 			Nur Skripte, Bilder, usw. erlauben die einen korrekten 'Content-Type' haben
+      \begin{lstlisting}[language=HTML]
+<script src="something.js"></script>
+			\end{lstlisting}
   \end{itemize}
 \end{frame}
 
@@ -91,6 +113,10 @@
 		\item z.B. SHA-256 oder argon2i (nicht MD5)
 		\item Für beste Security noch einen Salt verwenden\\
       (verhindert einfache Rainbow Tables)
+      \begin{lstlisting}[language=JavaScript]
+hash(password)
+hash(salt + password)
+			\end{lstlisting}
     \item z.B. A1 Telekom Austria
       \cite{a1passwoerter}
   \end{itemize}
@@ -121,6 +147,43 @@
 \end{frame}
 
 \begin{frame}[fragile]
+\frametitle{Eingaben serverseitg prüfen - SQL Injection}
+  \begin{lstlisting}[language=JavaScript]
+public async findPublicPostsByTitleOrContent(
+  searchTerm: string,
+): Promise<Post[]> {
+  const { rows } = await this.client.query(
+    "SELECT * FROM posts " +
+    "WHERE NOT is_private " +
+      "AND (title LIKE '%" + searchTerm + "%' " +
+      "OR content LIKE '%" + searchTerm + "%')",
+  );
+
+  return rows;
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Eingaben serverseitg prüfen - SQL Injection}
+  \begin{lstlisting}[language=JavaScript]
+public async findPublicPostsByTitleOrContent(
+  searchTerm: string,
+) {
+  const { rows } = await this.client.query(
+    "SELECT * FROM posts " +
+    "WHERE NOT is_private " +
+      "AND (title LIKE $1 " +
+      "OR content LIKE $1)",
+    ["%" + searchTerm + "%"],
+  );
+
+  return rows;
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
 \frametitle{Eingaben serverseitg prüfen - XSS Injection}
   \begin{itemize}
 		\item Mit $<$ kann man einen Tag öffnen
@@ -148,6 +211,8 @@
     \item z.B. CVE-2022-22978
       (Einfache zu machene fehlerhafte Konfiguration kann zum umgehen von der Autorisierung führen in Spring)
       \cite{CVE202222978}
+		\item z.B. Sicherheitsforscher legten Botnet lahm
+			\cite{heisebotnet}
   \end{itemize}
 \end{frame}
 
@@ -157,6 +222,31 @@
 \frametitle{Timing-Attacken}
   \begin{itemize}
 		\item Abläufe die besonders kritisch sind, können mit sogenannten Timing-Attacken angegriffen werden
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Timing-Attacken}
+  \begin{lstlisting}[language=Java]
+public boolean equals(String x, String y) {
+  if (x.length != y.length) {
+    return false;
+  }
+
+  for (int i = 0; i < x.length; i++) {
+    if (x[i] != y[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Timing-Attacken}
+  \begin{itemize}
     \item Hierbei wird ausgenutzt, dass bei der Überprüfung von z.B. bei einer
       E-Mail beim Login mehr Zeit verbraucht wird, wenn diese richtig ist
     \item z.B. CVE-2021-38153
